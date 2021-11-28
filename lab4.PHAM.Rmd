@@ -1,0 +1,221 @@
+---
+title: "Lab 4:  KNN regression"
+output: html_notebook
+---
+
+Write a function `myknn()` to perform KNN regression on a data set with two columns -- one for the predictor and one for the response.  
+
+Inputs to your function should be: 
+
+ - `dat` = data.frame with two columns
+ - `name.x` = name of predictor column 
+ - `name.y` = name of response column
+ - `k` = the K in KNN
+ 
+Your function should return `yhat` = vector of predicted $y$ values for each $x$ value in column `name.x`.   
+
+The steps below tell how to test `myknn()`.  
+
+1. Fit an SLR model on the `advertising` data using `TV` as the predictor and `sales` as the response.  Make a scatter plot of the data and the fitted SLR line.  Compute the MSE for the SLR model. 
+$$ MSE = \frac{1}{n} \sum_{i=1}^n (y_i - \hat f(x_i))^2= \frac{1}{n} \sum_{i=1}^n (y_i - \hat y_i)^2$$
+```{r}
+library(dplyr)
+library(FNN)
+advertising <- read.csv("~/Desktop/stat5310/week13/Advertising.csv", row.names=1)
+```
+
+```{r}
+##fit SLR model
+TV.mod <- lm(sales~TV, data=advertising)
+
+##make a scatter plot
+plot(sales~TV, data=advertising, pch=19, col=6); abline(TV.mod, col=1, lwd=2)
+
+##compute MSE for SLR model
+MSE <- mean(TV.mod$residuals^2)
+MSE
+
+```
+
+
+2. Use `myknn()` to fit three KNN models to the same data using $k$ values 3,9, and 27.  Compute the MSE for each $k$ value and overlay each of the resulting `yhat` vectors on the scatter plot in a different color.  Add a legend. 
+
+
+```{r}
+## write a function
+
+myknn <- function(dat, name.x, name.y, k) {
+
+dat <- dat[order(dat[,name.x]),]
+
+yhat <- NULL
+
+for(i in 1:nrow(dat)){
+x0 <- dat[, name.x][i]
+dat$d0 <- abs(dat[,name.x] - x0)
+yi <- dat %>% arrange(d0) %>% head(k) %>% select(name.y) %>% unlist() %>% mean()
+yhat <- c(yhat, yi)
+
+
+}
+return(yhat)
+
+}
+
+##k is 3
+yhat_3 <- myknn(advertising, 'TV', 'sales', 3)
+yhat_3
+
+##k is 9
+yhat_9 <- myknn(advertising, 'TV', 'sales', 9)
+yhat_9
+
+##k is 27
+yhat_27 <- myknn(advertising, 'TV', 'sales', 27)
+yhat_27
+```
+
+```{r}
+## method 1:compute MSE with knn.reg()
+n <- dim(advertising)[1]
+sales_knn_3 <- knn.reg(advertising$TV, test =  data.frame(advertising$TV), y =  advertising$sales, k = 3) #when k=3
+MSE_3 <- mean((sales_knn_3$pred - advertising$sales)^2)
+MSE_3
+  
+sales_knn_9 <- knn.reg(advertising$TV, test =  data.frame(advertising$TV), y = advertising$sales, k = 9) #when k=9
+MSE_9 <- mean((sales_knn_9$pred - advertising$sales)^2)
+MSE_9
+  
+sales_knn_27 <- knn.reg(advertising$TV, test =  data.frame(advertising$TV), y =  advertising$sales, k = 27) #when k=27
+MSE_27 <- mean((sales_knn_27$pred - advertising$sales)^2)
+MSE_27
+
+##method 2: using myknn() to compute MSE
+advertising <- arrange(advertising, TV) #sorting
+
+sum((advertising$sales - yhat_3)^2) / n
+
+sum((advertising$sales - yhat_9)^2) / n
+
+sum((advertising$sales - yhat_27)^2) / n
+
+```
+
+```{r}
+## make a scatter plot
+advertising <- arrange(advertising, TV) #sorting
+plot(sales~TV, data=advertising); abline(TV.mod, col=1, lwd=2)
+grid()
+lines(advertising$TV, yhat_3, col=4, lwd=2)
+lines(advertising$TV, yhat_9, col=2, lwd=2)
+lines(advertising$TV, yhat_27, col=11, lwd=2)
+legend(10, 27, legend=c("fitted line", "yhat_3", "yhat_9", "yhat_27"),
+       col=c(1, 4, 2, 11), lty=1, cex=0.7, box.lty=0, text.font=4)
+```
+
+
+
+
+
+
+
+
+
+3. Repeat steps 1 and 2 using `radio` as the predictor.  
+
+```{r}
+
+##fit the model
+radio.mod <- lm(sales~radio, data=advertising)
+
+##make a scatter plot
+plot(sales~radio, data=advertising, pch=19, col=6); abline(radio.mod, col=1, lwd=2)
+
+##compute MSE for SLR model (predictor radio)
+MSE1 <- mean(radio.mod$residuals^2)
+
+##calculate yhat with the predictor as `radio`
+yhat_radio_3 <- myknn(advertising, 'radio', 'sales', 3)
+yhat_radio_3
+
+
+yhat_radio_9 <- myknn(advertising, 'radio', 'sales', 9)
+yhat_radio_9
+
+
+yhat_radio_27 <- myknn(advertising, 'radio', 'sales', 27)
+yhat_radio_27
+
+##method 1: calculate MSE using knn.reg()
+radio_knn_3 <- knn.reg(advertising$radio, test = data.frame(advertising$radio), y =  advertising$sales, k = 3) #when k=3
+MSE_radio_3 <- mean((radio_knn_3$pred - advertising$sales)^2)
+MSE_radio_3
+  
+radio_knn_9 <- knn.reg(advertising$radio, test = data.frame(advertising$radio), y =  advertising$sales, k = 9) #when k=9
+MSE_radio_9 <- mean((radio_knn_9$pred - advertising$sales)^2)
+MSE_radio_9
+  
+radio_knn_27 <- knn.reg(advertising$radio, test = data.frame(advertising$radio), y =  advertising$sales, k = 27) #when k=27
+MSE_radio_27 <- mean((radio_knn_27$pred - advertising$sales)^2)
+MSE_radio_27
+
+##method 2: using myknn() to compute MSE
+advertising <- arrange(advertising, radio) #sorting
+
+sum((advertising$sales - yhat_radio_3)^2) / n
+
+sum((advertising$sales - yhat_radio_9)^2) / n
+
+sum((advertising$sales - yhat_radio_27)^2) / n
+
+```
+```{r}
+## make a scatter plot
+advertising <- arrange(advertising, radio) #sorting
+plot(sales~radio, data=advertising); abline(radio.mod, col=1, lwd=2);grid()
+lines(advertising$radio, yhat_radio_3, col=4, lwd=2)
+lines(advertising$radio, yhat_radio_9, col=2, lwd=2)
+lines(advertising$radio, yhat_radio_27, col=11, lwd=2)
+legend(10, 27, legend=c("fitted line", "yhat_3", "yhat_9", "yhat_27"),
+       col=c(1, 4, 2, 11), lty=1, cex=0.7, box.lty=0, text.font=4)
+```
+
+4. Make a data.frame with the following columns:  predictor, k, MSE(SLR), and MSE(KNN).  This data.frame should be 6x4 where 6 = [2 predictors (TV or radio)] $\times$ [3 k values (3,9,27)]. 
+
+```{r}
+## make a data frame
+df <- data.frame(predictor = c(rep("TV", 3), rep("radio", 3)),
+           k = rep(c(3, 9, 27), 2),
+           MSE_SLR = c(rep(MSE, 3), rep(MSE1, 3)),
+           MSE_KNN = c(MSE_3, MSE_9, MSE_27, MSE_radio_3, MSE_radio_9, MSE_radio_27))
+df
+
+```
+
+5.  Bonus problem (10 points): Modify `myknn()` so that it uses leave-one-out cross-validation (LOOCV).   Call the new function `myknn.cv()`.  It should return 
+`yhat.cv` = vector of predicted $y$ values based on the leave-one-out approach.  You decide how to test `myknn.cv()`.  
+
+```{r}
+myknn.cv <- function(dat, name.x, name.y, k) {
+
+dat <- dat[order(dat[,name.x]),]
+
+yhat.cv <- NULL
+
+for(i in 1:nrow(dat)){
+x0 <- dat[, name.x][i]
+dat$d0 <- abs(dat[,name.x] - x0)
+yi <- dat[-i,] %>% arrange(d0) %>% head(k) %>% select(name.y) %>% unlist() %>% mean()
+yhat.cv <- c(yhat.cv, yi)
+
+}
+return(yhat.cv)
+}
+
+##testing
+myknn.cv(advertising, 'TV', 'sales', 5)
+
+ 
+```
+
+
